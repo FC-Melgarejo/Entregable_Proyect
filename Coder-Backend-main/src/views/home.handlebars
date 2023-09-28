@@ -1,0 +1,13 @@
+<main>
+    {{#if user.isAdmin}}
+        <!-- Mostrar el formulario de inicio de sesión solo para administradores -->
+        <h2>Iniciar Sesión</h2>
+        <form action="/api/sessions/login/products" method="post">
+            <!-- Contenido del formulario de inicio de sesión -->
+        </form>
+    {{/if}}
+
+    <!-- Otro contenido de la página que es visible para todos -->
+</main>
+
+
