@@ -1,5 +1,6 @@
 const productModel = require('./models/productModel');
 
+
 class ProductManagerMongo {
     constructor(io) {
         this.model = productModel;
@@ -43,7 +44,40 @@ class ProductManagerMongo {
 
     async addProduct(data) {
         try {
-            // ... Código para validar y agregar un producto ...
+            if (
+                !data.title ||
+                !data.description ||
+                !data.code ||
+                !data.price ||
+                data.status === undefined ||
+                data.status === null ||
+                data.status === '' ||
+                !data.stock ||
+                !data.category
+            ) {
+                throw new Error('Todos los campos son obligatorios');
+            }
+
+            const exist = await this.model.findOne({ code: data.code });
+
+            if (exist) {
+                throw new Error(`Ya existe un producto con el código '${data.code}'`);
+            }
+
+            const newProduct = await this.model.create({
+                title: data.title,
+                description: data.description,
+                code: data.code,
+                price: data.price,
+                status: data.status,
+                stock: data.stock,
+                category: data.category,
+                thumbnails: data.thumbnails,
+            });
+
+            if (this.io) {
+                this.io.emit('newProduct', JSON.stringify(newProduct));
+            }
         } catch (error) {
             throw error;
         }
@@ -51,31 +85,24 @@ class ProductManagerMongo {
 
     async updateProduct(id, data) {
         try {
-            // ... Código para actualizar un producto ...
-        } catch (error) {
-            throw error;
-        }
-    }
+            const product = await this.getProductById(id);
 
-    async getProductDetails(productId) {
-        try {
-            const productDetails = await this.model.findById(productId);
-
-            if (!productDetails) {
-                throw new Error('Producto no encontrado en la base de datos');
+            if (!product) {
+                throw new Error('Producto no encontrado');
             }
 
-            return {
-                id: productDetails._id,
-                title: productDetails.title,
-                description: productDetails.description,
-                code: productDetails.code,
-                price: productDetails.price,
-                status: productDetails.status,
-                stock: productDetails.stock,
-                category: productDetails.category,
-                thumbnails: productDetails.thumbnails,
+            const productUpdated = {
+                ...product,
+                ...data,
             };
+
+            await this.model.updateOne({ _id: id }, productUpdated);
+
+            if (this.io) {
+                this.io.emit('updateProductInView', JSON.stringify(productUpdated));
+            }
+
+            return productUpdated;
         } catch (error) {
             throw error;
         }
@@ -83,7 +110,14 @@ class ProductManagerMongo {
 
     async deleteProduct(id) {
         try {
-            // ... Código para eliminar un producto ...
+            const product = await this.getProductById(id);
+            if (!product) {
+                throw new Error('Producto no encontrado');
+            }
+            await this.model.deleteOne({ _id: id });
+            if (this.io) {
+                this.io.emit('productDeleted', id);
+            }
         } catch (error) {
             throw error;
         }
@@ -91,3 +125,4 @@ class ProductManagerMongo {
 }
 
 module.exports = ProductManagerMongo;
+
